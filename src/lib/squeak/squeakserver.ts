@@ -8,6 +8,8 @@ import { FileCacheStrategyObject, FileWatchStrategyObject, FileWatchStoreObj } f
 import { MIMETYPES } from "./squeakconst";
 import { SqueakWatch } from "./squeakwatch";
 
+import { pathRes } from "../utilities";
+
 export class SqueakServer {
 
     private _debug: boolean = false;
@@ -33,6 +35,7 @@ export class SqueakServer {
     publicPath: string;
 
     constructor(private squeak){
+        console.log('Path Res:', pathRes());
         this.setup();
     }
 
@@ -491,10 +494,15 @@ export class SqueakServer {
             console.error(`Error: Attempting to rebuild ${view} failed. Not present in View Map!`);
             return;
         }
-        // The following will destroy and reinstantiate the view
-        if(this.viewMap[view]['squeakFile']) this.reloadViewClass(view);
-        // **********
-        this.reRenderView(view);
+        let backupView = JSON.parse(JSON.stringify(this.viewMap[view]));
+        try {
+            // Destroy and Reinstantiate
+            if(this.viewMap[view]['squeakFile']) this.reloadViewClass(view);
+            this.reRenderView(view);
+        } catch(e){
+            console.error(e);
+            this.viewMap[view] = backupView;
+        }
     }
 
     private reRenderView(view){

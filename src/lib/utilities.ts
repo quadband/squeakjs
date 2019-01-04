@@ -1,5 +1,6 @@
 // Imports
 import * as os from 'os';
+import * as path from "path";
 
 // Helper Utilities
 export function serverIp(serverObj): string {
@@ -17,4 +18,8 @@ export function randomId(): string {
         randId += letterMap[Math.floor(Math.random() * letterMapLen)];
     }
     return randId;
+}
+
+export function pathRes(){
+    return path.dirname(require.main.filename);
 }
