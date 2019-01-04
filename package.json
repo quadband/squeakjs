@@ -1,0 +1,25 @@
+{
+  "name": "squeakjs",
+  "version": "1.0.7",
+  "description": "Squeak is a small and light weight caching webserver with powerful routing and view parsing magic.",
+  "author": "David Schaefer",
+  "license": "GPL-3.0",
+  "devDependencies": {
+    "@types/node": "^10.12.18"
+  },
+  "repository": "quadband/squeakjs",
+  "files": [
+    "lib/",
+    "core.js",
+    "README.md"
+  ],
+  "keywords": [
+    "web server",
+    "expressless",
+    "view template",
+    "router"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
