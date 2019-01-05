@@ -10,3 +10,4 @@ __export(require("./lib/squeak/squeakcore"));
 __export(require("./lib/squeak/squeakserver"));
 __export(require("./lib/squeak/squeakutils"));
 __export(require("./lib/squeak/squeakwatch"));
+__export(require("./lib/squeak/squeakstate"));

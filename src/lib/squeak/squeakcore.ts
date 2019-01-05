@@ -86,7 +86,7 @@ export function SqueakInterface(config: SqueakInterfaceConfig) {
             public __config: string = JSON.stringify(config);
 
             public __request(req, res){
-                console.log(req.method);
+                //console.log(req.method);
                 if(this[METHODMAP[req.method]]) return this[METHODMAP[req.method]](req,res);
                 return undefined;
             }

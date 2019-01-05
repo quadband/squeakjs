@@ -2,10 +2,9 @@ import * as fs from 'fs';
 import * as path from "path";
 
 import { readRootView, SqueakView, SqueakInterface, SqueakMain } from './squeakcore';
-import { viewMux } from "./squeakutils";
+import { viewMux, resolveContentType } from "./squeakutils";
 import { SqueakCache } from "./squeakcache";
 import { FileCacheStrategyObject, FileWatchStrategyObject, FileWatchStoreObj } from "./squeakcommon";
-import { MIMETYPES } from "./squeakconst";
 import { SqueakWatch } from "./squeakwatch";
 
 import { pathRes } from "../utilities";
@@ -143,8 +142,7 @@ export class SqueakServer {
     tryFile(req, res){
         let filePath = '' + req.url;
         filePath = this.publicPath + filePath;
-        const extname = String(path.extname(filePath)).toLowerCase();
-        const contentType = MIMETYPES[extname] || 'application/octet-stream';
+        const contentType = resolveContentType(filePath);
         fs.readFile(filePath, (error, content) => {
             if (error) {
                 console.log(error.code);
@@ -541,11 +539,9 @@ export class SqueakServer {
     private rebuildFile(fileTar){
         console.log(`Rebuilding file: ${fileTar}`);
         let filePath = this.publicPath + fileTar;
-        const extname = String(path.extname(filePath)).toLowerCase();
-        const contentType = MIMETYPES[extname] || 'application/octet-stream';
         this.squeakCache.putFile({
             urlPath: fileTar,
-            contentType: contentType,
+            contentType: resolveContentType(filePath),
             buffer: undefined,
             encoding: 'utf-8'
         }, filePath, true);

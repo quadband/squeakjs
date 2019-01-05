@@ -5,3 +5,4 @@ export * from './lib/squeak/squeakcore';
 export * from './lib/squeak/squeakserver';
 export * from './lib/squeak/squeakutils';
 export * from './lib/squeak/squeakwatch';
+export * from './lib/squeak/squeakstate';

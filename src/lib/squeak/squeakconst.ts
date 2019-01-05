@@ -7,6 +7,8 @@ export const METHODMAP = {
     'DELETE': 'onDelete'
 };
 
+export const BLANK_PIXEL_PNG: string = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 export const MIMETYPES_SIMPLE = {
     '.html': 'text/html',
     '.js': 'text/javascript',

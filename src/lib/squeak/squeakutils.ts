@@ -4,7 +4,9 @@ const DOMParser = xmldom.DOMParser;
 const XMLSerializer = xmldom.XMLSerializer;
 // **********
 
-import {ATTMAP} from "./squeakconst";
+import {ATTMAP, MIMETYPES, BLANK_PIXEL_PNG} from "./squeakconst";
+import * as path from "path";
+
 
 // Request URL Params
 export function getParams(cf: string, url: string, paramCfg){
@@ -229,4 +231,13 @@ export function shouldDesugar(el): boolean {
 
 export function makeDoc(domString: string){
     return new DOMParser().parseFromString(domString, 'text/html');
+}
+
+export function resolveContentType(fileName: string){
+    const extname = String(path.extname(fileName)).toLowerCase();
+    return MIMETYPES[extname] || 'application/octet-stream';
+}
+
+export function trackingPixelHelper(pixelData: string = BLANK_PIXEL_PNG){
+    return Buffer.from(pixelData, 'base64');
 }

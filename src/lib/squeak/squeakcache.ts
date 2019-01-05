@@ -1,6 +1,6 @@
 import { FileCacheStore, FileCacheStoreObj, FileCacheList } from "./squeakcommon";
 import * as fs from 'fs';
-import { MIMETYPES } from "./squeakconst";
+import { resolveContentType } from "./squeakutils";
 import * as path from "path";
 
 export class SqueakCache {
@@ -110,7 +110,7 @@ export class SqueakCache {
             if(
                 this.put({
                     urlPath: fileList[i],
-                    contentType: this._getContentType(fileList[i]),
+                    contentType: resolveContentType(fileList[i]),
                     buffer: newFile
                 }, overwrite)
             ){
@@ -143,11 +143,6 @@ export class SqueakCache {
             if(this._debug) console.error(`Error reading ${filePath}: ${e}`);
             return null;
         }
-    }
-
-    private _getContentType(filePath: string): string{
-        let extname = String(path.extname(filePath)).toLowerCase();
-        return MIMETYPES[extname] || 'application/octet-stream';
     }
 
 }
