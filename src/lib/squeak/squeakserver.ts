@@ -1,5 +1,5 @@
 import * as fs from 'fs';
-import * as path from "path";
+import * as url from 'url';
 
 import { readRootView, SqueakView, SqueakInterface, SqueakMain } from './squeakcore';
 import { viewMux, resolveContentType } from "./squeakutils";
@@ -88,20 +88,22 @@ export class SqueakServer {
 
     // Serve
     public serve(req,res) {
+        req.parsed = url.parse(req.url, true);
         if(this._debug) if(this._debug) console.log('URL TARGET: ', req.url);
 
-        if(this.squeakCache.check(req.url)) return this.serveCache(req, res);
+        if(this.squeakCache.check(req.parsed.pathname)) return this.serveCache(req, res);
 
-        if(this.interfaceStore[req.url]) return this.serveInterface(req,res);
-        //if(this.viewStore[req.url]) return this.serveView(req, res);
-        if(this.checkConsume(req.url) != undefined) return this.serveConsume(req, res);
+        if(this.interfaceStore[req.parsed.pathname]) return this.serveInterface(req,res);
+        if(this.checkConsume(req.parsed.pathname) != undefined) return this.serveConsume(req, res);
 
-        let wildcard: Wildcard = this.checkWildcard(req.url);
-        if(wildcard){
-            if(this.interfaceStore[wildcard.path]) return this.serveInterface(req,res);
-            if(this.squeakCache.check(wildcard.path)) return this.serveCache(req, res);
+
+
+        let wildcard: Wildcard = this.checkWildcard(req.parsed.pathname);
+        if(wildcard != undefined){
+            if(this.interfaceStore[wildcard.path]) return this.serveInterface(req,res, wildcard.path);
+            if(this.squeakCache.check(wildcard.path)) return this.serveCache(req, res, wildcard.path);
         }
-        if(this.fileCache && this.squeakCache.check(req.url)) return this.serveCache(req, res);
+        if(this.fileCache && this.squeakCache.check(req.parsed.pathname)) return this.serveCache(req, res);
         if(this.publicPath != undefined) return this.tryFile(req, res);
 
         // Nothing Found in anything
@@ -109,38 +111,34 @@ export class SqueakServer {
     }
 
     // Serve Methods
-    serveView(req, res){
-        if(this.viewStore[req.url].onRequest) this.viewStore[req.url].onRequest(req);
-        res.writeHead(200, {'Content-Type': 'text/html'});
-        return res.end(this.viewStore[req.url].viewRender, 'utf-8');
-    }
-
-    serveInterface(req,res){
-        if(this.interfaceStore[req.url].onRequest) this.interfaceStore[req.url].onRequest(req);
-        this.interfaceStore[req.url].__request(req,res);
-        if(this.interfaceStore[req.url].afterRequest) this.interfaceStore[req.url].afterRequest(req);
+    serveInterface(req,res,wildPath: string = undefined){
+        let urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
+        if(this.interfaceStore[urlTar].onRequest) this.interfaceStore[urlTar].onRequest(req);
+        this.interfaceStore[urlTar].__request(req,res);
+        if(this.interfaceStore[urlTar].afterRequest) this.interfaceStore[urlTar].afterRequest(req);
         return;
     }
 
     serveConsume(req, res){
-        let tar = this.checkConsume(req.url);
+        let tar = this.checkConsume(req.parsed.pathname);
         if(this.consumeMap[tar].onRequest) this.consumeMap[tar].onRequest(req);
         this.consumeMap[tar].__request(req, res);
         if(this.consumeMap[tar].afterRequest) this.consumeMap[tar].afterRequest(req);
         return;
     }
 
-    serveCache(req, res){
-        if(this.viewStore[req.url] && this.viewStore[req.url].onRequest) this.viewStore[req.url].onRequest(req);
-        let cacheObj = this.squeakCache.get(req.url);
+    serveCache(req, res, wildPath: string = undefined){
+        let urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
+        if(this.viewStore[urlTar] && this.viewStore[urlTar].onRequest) this.viewStore[urlTar].onRequest(req);
+        let cacheObj = this.squeakCache.get(urlTar);
         res.writeHead(200, {'Content-Type': cacheObj.contentType});
         res.end(cacheObj.buffer, cacheObj.encoding);
-        if(this.viewStore[req.url] && this.viewStore[req.url].afterRequest) this.viewStore[req.url].afterRequest(req);
+        if(this.viewStore[urlTar] && this.viewStore[urlTar].afterRequest) this.viewStore[urlTar].afterRequest(req);
         return;
     }
 
     tryFile(req, res){
-        let filePath = '' + req.url;
+        let filePath = '' + req.parsed.pathname;
         filePath = this.publicPath + filePath;
         const contentType = resolveContentType(filePath);
         fs.readFile(filePath, (error, content) => {
@@ -157,12 +155,12 @@ export class SqueakServer {
             else {
                 if(this.fileCache && this.fileCacheStrategy.cacheStrategy == 'CACHE_ON_FIRST_LOAD') {
                     this.squeakCache.put({
-                        urlPath: req.url,
+                        urlPath: req.parsed.pathname,
                         contentType: contentType,
                         buffer: content,
                         encoding: 'utf-8'
                     });
-                    this.setFileWatcher(req.url, filePath);
+                    this.setFileWatcher(req.parsed.pathname, filePath);
                 }
                 res.writeHead(200, { 'Content-Type': contentType });
                 res.end(content, 'utf-8');
