@@ -104,7 +104,7 @@ export function traverseTree(lookFor, node): boolean {
                 console.log('Found Match for:', lookFor);
                 return true;
             } else {
-                console.log('Looking');
+                //console.log('Looking', lookFor);
                 return traverseTree(lookFor, node.parentNode);
             }
         } catch(e){

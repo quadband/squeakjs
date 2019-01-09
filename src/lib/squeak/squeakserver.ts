@@ -74,9 +74,6 @@ export class SqueakServer {
         // Last Pass Render
         this.lastPassRender();
         // TODO: Finish shit ree
-        for(let view in this.viewMap){
-            this.viewMap[view].viewRender = this.viewMap[view].viewPreRender;
-        }
 
         // Set Watchers
         this.setWatchers();
@@ -420,12 +417,8 @@ export class SqueakServer {
         this.buildRoots();
         // Extract roots
         this.applyRoots(this.extractRoots());
-
-        // TODO: Fix this
-        for(let view in this.viewMap){
-            this.viewMap[view].viewRender = this.viewMap[view].viewPreRender;
-        }
-
+        // Last Pass Render
+        this.lastPassRender();
         // Make Paths
         this.pathMaker(true);
     }
@@ -512,7 +505,7 @@ export class SqueakServer {
     private reRenderView(view){
         this.viewMap[view].__build();
         this.viewMap[view].__preRender(this.extractRoots());
-        this.viewMap[view].viewRender = this.viewMap[view].viewPreRender;
+        this.viewMap[view].__lastPassRender();
         if(this.viewMap[view].urlPath){
             this.viewStore[this.viewMap[view].urlPath] = this.viewMap[view];
             this.squeakCache.put({
