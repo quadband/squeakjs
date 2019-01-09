@@ -63,6 +63,11 @@ export function SqueakView(config: SqueakViewConfig){
                 if(this.styleUrls != undefined) this.viewPreRender = applyClientStyles(this.viewPreRender, this.styleUrls);
                 if(this.clientJs != undefined) this.viewPreRender = applyClientScripts(this.viewPreRender, this.clientJs);
             }
+
+            public __lastPassRender(){
+                let _parseTemplateVars = parseTemplateVars.bind(this);
+                this.viewRender = _parseTemplateVars(this.viewPreRender);
+            }
         }
     }
 }

@@ -71,6 +71,8 @@ export class SqueakServer {
         this.buildRoots();
         // Extract and Apply roots
         this.applyRoots(this.extractRoots());
+        // Last Pass Render
+        this.lastPassRender();
         // TODO: Finish shit ree
         for(let view in this.viewMap){
             this.viewMap[view].viewRender = this.viewMap[view].viewPreRender;
@@ -268,6 +270,12 @@ export class SqueakServer {
     private applyRoots(roots) {
         for(let view in this.viewMap){
             if(this.viewMap[view].type == 'view') this.viewMap[view].__preRender(roots);
+        }
+    }
+
+    private lastPassRender() {
+        for(let view in this.viewMap){
+            if(this.viewMap[view].type == 'view') this.viewMap[view].__lastPassRender();
         }
     }
 
