@@ -160,7 +160,7 @@ export function viewMux(vm, key, cur, muxFrom: string, muxTo: string){
         if(tagMatch.length > 0){
             let repDoc = makeDoc(vm[tag][muxFrom]);
             for(let i=0,len=tagMatch.length;i<len;i++){
-                doc.replaceChild(repDoc, tagMatch[i]);
+                tagMatch[i].parentNode.replaceChild(repDoc.cloneNode(true), tagMatch[i]);
             }
         }
     }
@@ -240,4 +240,12 @@ export function resolveContentType(fileName: string){
 
 export function trackingPixelHelper(pixelData: string = BLANK_PIXEL_PNG){
     return Buffer.from(pixelData, 'base64');
+}
+
+export function extractViewTemplate(){
+
+}
+
+export function applyViewTemplate(){
+
 }

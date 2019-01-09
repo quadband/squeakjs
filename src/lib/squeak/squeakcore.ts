@@ -14,9 +14,11 @@ export interface SqueakViewConfig {
     squeakName: string;
     squeakPath: string;
     squeakFile?: string;
-    urlPath: string;
+    urlPath?: string;
+    global?: boolean;
     title?: string;
-    views: Array<SqueakViewSelector>;
+    view?: string;
+    views?: Array<SqueakViewSelector>;
     styleUrls?: Array<string>;
     clientJs?: Array<string>;
 }
@@ -33,8 +35,10 @@ export function SqueakView(config: SqueakViewConfig){
             public squeakName: string = config.squeakName;
             public squeakPath: string = config.squeakPath;
             public squeakFile: string = config.squeakFile || undefined;
-            public urlPath: string = config.urlPath;
-            public views: Array<SqueakViewSelector> = config.views;
+            public urlPath: string = config.urlPath || undefined;
+            public squeakGlobal: boolean = config.global || false;
+            public view: string = config.view || undefined;
+            public views: Array<SqueakViewSelector> = config.views || [];
             public styleUrls: Array<string> = config.styleUrls != undefined ? config.styleUrls : undefined;
             public clientJs: Array<string> = config.clientJs != undefined ? config.clientJs : undefined;
             public squeakTitle: string = config.title != undefined ? config.title : undefined;
@@ -47,9 +51,10 @@ export function SqueakView(config: SqueakViewConfig){
                 this.__emitter.emit('viewEvt', {type: evtType, from: this.squeakName, data: data});
             }
 
-            public __build(){
+            public __build(globals: any){
                 console.log('BUILDING ', this.squeakName);
-                this.viewString = readSqueakView(this.views, this.squeakPath);
+                if(this.view != undefined) this.viewString = readSqueakView(this.view, globals);
+                if(this.views.length > 0) this.viewString = readSqueakViews(this.views, this.squeakPath, globals);
                 let _desugar = desugar.bind(this);
                 this.viewPreRender = _desugar(this.viewString);
                 let _parseTemplateVars = parseTemplateVars.bind(this);
@@ -170,17 +175,38 @@ export function viewRead(path): string {
     }
 }
 
-export function readSqueakView(views, viewDir: string): string {
-    let vm = {};
+export function readSqueakView(view: string, globals): string {
+    let vm = {'index': { viewString: view }};
+    vm = applyGlobals(vm, globals);
+    return preParseView(vm);
+}
 
-    // Read View
+export function readSqueakViews(views, viewDir: string, globals): string {
+    let vm = {};
+    // Read Views
     for(let view in views){
         if(views.hasOwnProperty(view)){
             vm[views[view].selector] = views[view];
             vm[views[view].selector]['viewString'] = viewRead(viewDir + '/' + views[view].file);
         }
     }
+    vm = applyGlobals(vm, globals);
+    return preParseView(vm);
+}
 
+export function applyGlobals(vm, globals) {
+    if(globals != undefined){
+        for(let key in globals){
+            if(globals.hasOwnProperty(key)){
+                if(vm[key]) throw 'Error: Global name collision with view selector!';
+                vm[key] = globals[key];
+            }
+        }
+    }
+    return vm;
+}
+
+export function preParseView(vm): string {
     // Quick Sanitize anything sketchy
     // TODO: Make this smarter
     for(let key in vm){
@@ -188,6 +214,11 @@ export function readSqueakView(views, viewDir: string): string {
     }
 
     // TODO: Check for attributes
+
+    // Pre pass desugar
+    for(let key in vm){
+        vm[key].viewString = desugar(vm[key].viewString);
+    }
 
     // Mux View
     for(let key in vm){

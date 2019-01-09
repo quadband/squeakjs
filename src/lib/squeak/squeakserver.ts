@@ -241,9 +241,21 @@ export class SqueakServer {
     }
 
     private runViewBuilds(): void {
+        let globals = {};
+        let globalFound: boolean = false;
         for(let view in this.viewMap){
-            if(this.viewMap[view].type == 'view'){
+            if(this.viewMap[view].type == 'view' && this.viewMap[view].squeakGlobal){
                 this.viewMap[view].__build();
+                globals[view] = this.viewMap[view];
+                globalFound = true;
+            }
+        }
+
+        if(!globalFound) globals = undefined;
+
+        for(let view in this.viewMap){
+            if(this.viewMap[view].type == 'view' && !this.viewMap[view].squeakGlobal){
+                this.viewMap[view].__build(globals);
             }
         }
     }
