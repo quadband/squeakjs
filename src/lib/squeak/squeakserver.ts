@@ -17,6 +17,7 @@ export class SqueakServer {
     viewStore = {};
     interfaceMap = {};
     interfaceStore = {};
+    componentMap = {};
 
     eventListeners = {};
 
@@ -204,6 +205,7 @@ export class SqueakServer {
                 }
                 if(newView.type == 'interface') this.interfaceMap[newView.squeakName] = newView;
                 if(newView.type == 'view') this.viewMap[newView.squeakName] = newView;
+                if(newView.type == 'component') this.componentMap[newView.squeakName] = newView;
             }
         }
     }
@@ -250,8 +252,11 @@ export class SqueakServer {
                 globalFound = true;
             }
         }
-
         if(!globalFound) globals = undefined;
+
+        for(let view in this.componentMap){
+            this.componentMap[view].__build(globals);
+        }
 
         for(let view in this.viewMap){
             if(this.viewMap[view].type == 'view' && !this.viewMap[view].squeakGlobal){
@@ -284,7 +289,7 @@ export class SqueakServer {
 
     private lastPassRender() {
         for(let view in this.viewMap){
-            if(this.viewMap[view].type == 'view') this.viewMap[view].__lastPassRender();
+            if(this.viewMap[view].type == 'view') this.viewMap[view].__lastPassRender(this.componentMap);
         }
     }
 
@@ -369,7 +374,7 @@ export class SqueakServer {
 
     private pathMaker(overwrite: boolean = false): void {
         for(let view in this.viewMap){
-            if(this.viewMap[view].urlPath){
+            if(this.viewMap[view].type == 'view' && !this.viewMap[view].squeakGlobal && this.viewMap[view].urlPath){
                 this.viewStore[this.viewMap[view].urlPath] = this.viewMap[view];
                 this.squeakCache.put({
                     urlPath: this.viewStore[this.viewMap[view].urlPath].urlPath,
@@ -515,9 +520,22 @@ export class SqueakServer {
     }
 
     private reRenderView(view){
-        this.viewMap[view].__build();
+        let globals = {};
+        let globalFound: boolean = false;
+        for(let view in this.viewMap){
+            if(this.viewMap[view].type == 'view' && this.viewMap[view].squeakGlobal){
+                this.viewMap[view].__build();
+                globals[view] = this.viewMap[view];
+                globalFound = true;
+            }
+        }
+        if(!globalFound) globals = undefined;
+
+        // TODO: MAKE COMPONENTS HERE
+
+        this.viewMap[view].__build(globals);
         this.viewMap[view].__preRender(this.extractRoots());
-        this.viewMap[view].__lastPassRender();
+        this.viewMap[view].__lastPassRender(this.componentMap);
         if(this.viewMap[view].urlPath){
             this.viewStore[this.viewMap[view].urlPath] = this.viewMap[view];
             this.squeakCache.put({

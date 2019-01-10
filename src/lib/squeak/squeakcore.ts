@@ -69,9 +69,74 @@ export function SqueakView(config: SqueakViewConfig){
                 if(this.clientJs != undefined) this.viewPreRender = applyClientScripts(this.viewPreRender, this.clientJs);
             }
 
+            public __lastPassRender(components: any){
+                let _parseTemplateVars = parseTemplateVars.bind(this);
+                this.viewPreRender = _parseTemplateVars(this.viewPreRender);
+                let _parseTemplateComponents = parseTemplateComponents.bind(this);
+                this.viewRender = _parseTemplateComponents(this.viewPreRender, components);
+            }
+        }
+    }
+}
+
+export interface SqueakComponentConfig {
+    squeakName: string;
+    squeakPath: string;
+    squeakFile?: string;
+    view?: string;
+    views?: Array<SqueakViewSelector>;
+}
+
+export function SqueakComponent(config: SqueakComponentConfig){
+    return function<T extends {new(...args:any[]):{}}>(constructor:T){
+        return class extends constructor {
+            public type: string = 'component';
+            public squeakName: string = config.squeakName;
+            public squeakPath: string = config.squeakPath;
+            public squeakFile: string = config.squeakFile || undefined;
+            public view: string = config.view || undefined;
+            public views: Array<SqueakViewSelector> = config.views || [];
+            public __config: string = JSON.stringify(config);
+            public viewString: string = '.';
+            public viewRender: string = '.';
+            public viewPreRender: string = '.';
+            public __emitter = new events.EventEmitter();
+            public __emit(evtType, data: any = {}){
+                this.__emitter.emit('componentEvt', {type: evtType, from: this.squeakName, data: data});
+            }
+
+            public __build(globals: any){
+                console.log('BUILDING ', this.squeakName);
+                if(this.view != undefined) this.viewString = readSqueakView(this.view, globals);
+                if(this.views.length > 0) this.viewString = readSqueakViews(this.views, this.squeakPath, globals);
+                let _desugar = desugar.bind(this);
+                this.viewPreRender = _desugar(this.viewString);
+                let _parseTemplateVars = parseTemplateVars.bind(this);
+                this.viewPreRender = _parseTemplateVars(this.viewPreRender);
+                let _checkIterators = checkIterators.bind(this);
+                this.viewPreRender = _checkIterators(this.viewPreRender);
+            }
+
             public __lastPassRender(){
                 let _parseTemplateVars = parseTemplateVars.bind(this);
                 this.viewRender = _parseTemplateVars(this.viewPreRender);
+            }
+
+            public __make(cInput){
+                let doc = makeDoc(this.viewPreRender);
+                for(let i=0,len=cInput.childNodes.length;i<len;i++){
+                    if(cInput.childNodes[i].tagName) {
+                        let selNode = doc.getElementsByTagName(cInput.childNodes[i].tagName)[0];
+                        let fragment = doc.createDocumentFragment();
+                        if(cInput.childNodes[i].hasChildNodes()){
+                            for(let j=0,jlen=cInput.childNodes[i].childNodes.length;j<jlen;j++){
+                                fragment.appendChild(cInput.childNodes[i].childNodes[j].cloneNode(true));
+                            }
+                        }
+                        selNode.parentNode.replaceChild(fragment.cloneNode(true), selNode);
+                    }
+                }
+                return doc;
             }
         }
     }
@@ -235,6 +300,22 @@ export function parseTemplateVars(vs){
         if(doc.childNodes[i].hasChildNodes()) _parseBranch(doc.childNodes[i], _parseBranch, doc);
     }
     return serialize(doc);
+}
+
+export function parseTemplateComponents(vs, components){
+    if(components == undefined || Object.keys(components).length < 1) return vs;
+    let doc = makeDoc(vs);
+    for(let sel in components){
+        let tagMatch = doc.getElementsByTagName(sel);
+        if(tagMatch.length > 0){
+            for(let i=0,len=tagMatch.length;i<len;i++){
+                let repDoc = components[sel].__make(tagMatch[i]);
+                tagMatch[i].parentNode.replaceChild(repDoc.cloneNode(true), tagMatch[i]);
+            }
+        }
+    }
+    return serialize(doc);
+
 }
 
 export function desugar(vs): string {
