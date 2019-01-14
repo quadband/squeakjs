@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as url from 'url';
+import * as zlib from 'zlib';
 
 import { readRootView, SqueakView, SqueakInterface, SqueakMain } from './squeakcore';
 import { viewMux, resolveContentType } from "./squeakutils";
@@ -34,7 +35,8 @@ export class SqueakServer {
 
     publicPath: string;
 
-    constructor(private squeak){
+    constructor(private squeak, debug: boolean = false){
+        this._debug = debug;
         console.log('Path Res:', pathRes());
         this.setup();
     }
@@ -89,14 +91,15 @@ export class SqueakServer {
     // Serve
     public serve(req,res) {
         req.parsed = url.parse(req.url, true);
-        if(this._debug) if(this._debug) console.log('URL TARGET: ', req.url);
+        if(this._debug){
+            console.log('URL TARGET:', req.url);
+            console.log('HEADERS:', req.headers);
+        }
 
         if(this.squeakCache.check(req.parsed.pathname)) return this.serveCache(req, res);
 
         if(this.interfaceStore[req.parsed.pathname]) return this.serveInterface(req,res);
         if(this.checkConsume(req.parsed.pathname) != undefined) return this.serveConsume(req, res);
-
-
 
         let wildcard: Wildcard = this.checkWildcard(req.parsed.pathname);
         if(wildcard != undefined){
@@ -131,11 +134,51 @@ export class SqueakServer {
         let urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
         if(this.viewStore[urlTar] && this.viewStore[urlTar].onRequest) this.viewStore[urlTar].onRequest(req);
         let cacheObj = this.squeakCache.get(urlTar);
-        res.writeHead(200, {'Content-Type': cacheObj.contentType});
-        res.end(cacheObj.buffer, cacheObj.encoding);
+        this.sendData(req, res, cacheObj);
         if(this.viewStore[urlTar] && this.viewStore[urlTar].afterRequest) this.viewStore[urlTar].afterRequest(req);
         return;
     }
+
+    sendData(req, res, dataObj){
+        let acceptEncoding: string;
+        if(req.headers['accept-encoding']){
+            acceptEncoding = req.headers['accept-encoding'];
+        } else {
+            acceptEncoding = '';
+        }
+        if(acceptEncoding.match(/\bgzip\b/)){
+            this.sendZipped(req, res, dataObj);
+        } else {
+            this.sendNormal(req, res, dataObj);
+        }
+    }
+
+    sendZipped(req, res, dataObj){
+        if(dataObj['zbuffer']) {
+            if(this._debug) console.log('Using Cached Zip Buffer');
+            if(this._debug) console.log('Serving: gzip');
+            res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
+            res.end(dataObj['zbuffer']);
+        } else {
+            if(this._debug) console.log('Zipping Data');
+            zlib.gzip(dataObj.buffer,(err, zipped)=>{
+                if(err){
+                    this.sendNormal(req,res,dataObj);
+                } else {
+                    if(this._debug) console.log('Serving: gzip');
+                    res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
+                    res.end(zipped);
+                }
+            });
+        }
+    }
+
+    sendNormal(req,res, dataObj){
+        if(this._debug) console.log('Serving:', dataObj.encoding);
+        res.writeHead(200, {'Content-Type': dataObj.contentType});
+        res.end(dataObj.buffer, dataObj.encoding);
+    }
+
 
     tryFile(req, res){
         let filePath = '' + req.parsed.pathname;
@@ -153,17 +196,17 @@ export class SqueakServer {
                 }
             }
             else {
+                let dataObj = {
+                    urlPath: req.parsed.pathname,
+                    contentType: contentType,
+                    buffer: content,
+                    encoding: 'utf-8'
+                };
                 if(this.fileCache && this.fileCacheStrategy.cacheStrategy == 'CACHE_ON_FIRST_LOAD') {
-                    this.squeakCache.put({
-                        urlPath: req.parsed.pathname,
-                        contentType: contentType,
-                        buffer: content,
-                        encoding: 'utf-8'
-                    });
+                    this.squeakCache.put(dataObj);
                     this.setFileWatcher(req.parsed.pathname, filePath);
                 }
-                res.writeHead(200, { 'Content-Type': contentType });
-                res.end(content, 'utf-8');
+                this.sendData(req, res, dataObj);
             }
         });
     }

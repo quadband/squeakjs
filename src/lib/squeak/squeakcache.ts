@@ -2,6 +2,7 @@ import { FileCacheStore, FileCacheStoreObj, FileCacheList } from "./squeakcommon
 import * as fs from 'fs';
 import { resolveContentType } from "./squeakutils";
 import * as path from "path";
+import * as zlib from 'zlib';
 
 export class SqueakCache {
 
@@ -40,6 +41,7 @@ export class SqueakCache {
         }
 
         this._cache[obj.urlPath] = obj;
+        this._tryZip(obj.urlPath, obj.buffer);
         this._itemCount++;
         if(this._debug) console.log(`Cache successful. Items in cache: ${this._itemCount}`);
         return true;
@@ -142,6 +144,22 @@ export class SqueakCache {
         }catch(e){
             if(this._debug) console.error(`Error reading ${filePath}: ${e}`);
             return null;
+        }
+    }
+
+    private _tryZip(key, buffer){
+        try {
+            zlib.gzip(buffer,(err, zipped)=>{
+                if(err){
+                    if(this._debug) console.error(`Error: Something went wrong while trying to zip data. ${err}`);
+                    this._cache[key]['zbuffer'] = null;
+                } else {
+                    if(this._debug) console.log(`Zipped Successfully`);
+                    this._cache[key]['zbuffer'] = zipped;
+                }
+            });
+        } catch(e){
+            if(this._debug) console.error(`Error: Something went wrong while trying to zip data. ${e}`);
         }
     }
 

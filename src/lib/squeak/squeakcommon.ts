@@ -93,6 +93,7 @@ export interface FileCacheStoreObj {
     urlPath: string;
     contentType: string;
     buffer: Buffer;
+    zbuffer?: Buffer;
     encoding?: string;
 }
 export interface FileCacheStore {
