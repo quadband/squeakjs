@@ -90,6 +90,7 @@ export class SqueakServer {
 
     // Serve
     public serve(req,res) {
+
         req.parsed = url.parse(req.url, true);
         if(this._debug){
             console.log('URL TARGET:', req.url);
@@ -155,30 +156,43 @@ export class SqueakServer {
 
     sendZipped(req, res, dataObj){
         if(dataObj['zbuffer']) {
-            if(this._debug) console.log('Using Cached Zip Buffer');
-            if(this._debug) console.log('Serving: gzip');
-            res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
-            res.end(dataObj['zbuffer']);
+            if(this._debug) {
+                console.log('Using Cached Zip Buffer');
+                console.log('Serving: gzip');
+            }
+            try {
+                res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
+                res.end(dataObj['zbuffer']);
+            }catch(e){
+                if(this._debug) console.error(`Error: Unable to send response. ${e}`);
+            }
         } else {
             if(this._debug) console.log('Zipping Data');
             zlib.gzip(dataObj.buffer,(err, zipped)=>{
                 if(err){
                     this.sendNormal(req,res,dataObj);
                 } else {
-                    if(this._debug) console.log('Serving: gzip');
-                    res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
-                    res.end(zipped);
+                    try {
+                        if(this._debug) console.log('Serving: gzip');
+                        res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
+                        res.end(zipped);
+                    } catch(e){
+                        if(this._debug) console.error(`Error: Unable to send response. ${e}`);
+                    }
                 }
             });
         }
     }
 
     sendNormal(req,res, dataObj){
-        if(this._debug) console.log('Serving:', dataObj.encoding);
-        res.writeHead(200, {'Content-Type': dataObj.contentType});
-        res.end(dataObj.buffer, dataObj.encoding);
+        try {
+            if(this._debug) console.log('Serving:', dataObj.encoding);
+            res.writeHead(200, {'Content-Type': dataObj.contentType});
+            res.end(dataObj.buffer, dataObj.encoding);
+        } catch (e){
+            if(this._debug) console.error(`Error: Unable to send response. ${e}`);
+        }
     }
-
 
     tryFile(req, res){
         let filePath = '' + req.parsed.pathname;
@@ -191,11 +205,14 @@ export class SqueakServer {
                     return this.serveNotFound(req,res);
                 }
                 else {
-                    res.writeHead(500);
-                    res.end('Sorry, check with the site admin for error: '+error.code+' ..\n');
+                    try {
+                        res.writeHead(500);
+                        res.end('Sorry, check with the site admin for error: '+error.code+' ..\n');
+                    } catch(e){
+                        if(this._debug) console.error(`Error: Unable to send response. ${e}`);
+                    }
                 }
-            }
-            else {
+            } else {
                 let dataObj = {
                     urlPath: req.parsed.pathname,
                     contentType: contentType,
@@ -232,8 +249,13 @@ export class SqueakServer {
     }
 
     serveNotFound(req, res){
-        res.writeHead(200, { 'Content-Type': 'text/html' });
-        res.end(this.notFound, 'utf-8');
+        let dataObj = {
+            urlPath: req.parsed.pathname,
+            contentType: 'text/html',
+            buffer: this.notFound,
+            encoding: 'utf-8'
+        };
+        this.sendData(res, res, dataObj);
     }
 
     // INTERNAL METHODS
