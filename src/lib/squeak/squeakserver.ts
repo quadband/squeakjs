@@ -255,7 +255,7 @@ export class SqueakServer {
             buffer: this.notFound,
             encoding: 'utf-8'
         };
-        this.sendData(res, res, dataObj);
+        this.sendData(req, res, dataObj);
     }
 
     // INTERNAL METHODS
