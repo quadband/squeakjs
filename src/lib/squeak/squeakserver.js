@@ -1,15 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const fs = require("fs");
-const url = require("url");
-const zlib = require("zlib");
-const squeakcore_1 = require("./squeakcore");
-const squeakutils_1 = require("./squeakutils");
-const squeakcache_1 = require("./squeakcache");
-const squeakwatch_1 = require("./squeakwatch");
-const utilities_1 = require("../utilities");
-class SqueakServer {
-    constructor(squeak, debug = false) {
+var fs = require("fs");
+var url = require("url");
+var zlib = require("zlib");
+var squeakcore_1 = require("./squeakcore");
+var squeakutils_1 = require("./squeakutils");
+var squeakcache_1 = require("./squeakcache");
+var squeakwatch_1 = require("./squeakwatch");
+var utilities_1 = require("../utilities");
+var SqueakServer = /** @class */ (function () {
+    function SqueakServer(squeak, debug) {
+        if (debug === void 0) { debug = false; }
         this.squeak = squeak;
         this._debug = false;
         this.viewMap = {};
@@ -25,14 +26,14 @@ class SqueakServer {
         console.log('Path Res:', utilities_1.pathRes());
         this.setup();
     }
-    setup() {
+    SqueakServer.prototype.setup = function () {
         this.publicPath = this.squeak.publicDir;
         this.fileCacheStrategy = this.squeak.fileCacheStrategy;
         this.fileWatchStrategy = this.squeak.fileWatchStrategy;
         this.init();
-    }
-    init() {
-        const bootstrap = this.squeak.bootstrap();
+    };
+    SqueakServer.prototype.init = function () {
+        var bootstrap = this.squeak.bootstrap();
         if (this._debug)
             console.log('Bootstrapping:', bootstrap);
         // Check Cache Strategy
@@ -45,8 +46,8 @@ class SqueakServer {
         this.gatherRootViews(bootstrap);
         // Build
         this.viewBuilder();
-    }
-    viewBuilder() {
+    };
+    SqueakServer.prototype.viewBuilder = function () {
         // Apply Interfaces
         this.applyInterfaces();
         // Read Root Views
@@ -66,9 +67,9 @@ class SqueakServer {
         this.setEventListeners();
         // Make Paths
         this.pathMaker();
-    }
+    };
     // Serve
-    serve(req, res) {
+    SqueakServer.prototype.serve = function (req, res) {
         req.parsed = url.parse(req.url, true);
         if (this._debug) {
             console.log('URL TARGET:', req.url);
@@ -80,7 +81,7 @@ class SqueakServer {
             return this.serveInterface(req, res);
         if (this.checkConsume(req.parsed.pathname) != undefined)
             return this.serveConsume(req, res);
-        let wildcard = this.checkWildcard(req.parsed.pathname);
+        var wildcard = this.checkWildcard(req.parsed.pathname);
         if (wildcard != undefined) {
             if (this.interfaceStore[wildcard.path])
                 return this.serveInterface(req, res, wildcard.path);
@@ -93,38 +94,40 @@ class SqueakServer {
             return this.tryFile(req, res);
         // Nothing Found in anything
         return this.serveNotFound(req, res);
-    }
+    };
     // Serve Methods
-    serveInterface(req, res, wildPath = undefined) {
-        let urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
+    SqueakServer.prototype.serveInterface = function (req, res, wildPath) {
+        if (wildPath === void 0) { wildPath = undefined; }
+        var urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
         if (this.interfaceStore[urlTar].onRequest)
             this.interfaceStore[urlTar].onRequest(req);
         this.interfaceStore[urlTar].__request(req, res);
         if (this.interfaceStore[urlTar].afterRequest)
             this.interfaceStore[urlTar].afterRequest(req);
         return;
-    }
-    serveConsume(req, res) {
-        let tar = this.checkConsume(req.parsed.pathname);
+    };
+    SqueakServer.prototype.serveConsume = function (req, res) {
+        var tar = this.checkConsume(req.parsed.pathname);
         if (this.consumeMap[tar].onRequest)
             this.consumeMap[tar].onRequest(req);
         this.consumeMap[tar].__request(req, res);
         if (this.consumeMap[tar].afterRequest)
             this.consumeMap[tar].afterRequest(req);
         return;
-    }
-    serveCache(req, res, wildPath = undefined) {
-        let urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
+    };
+    SqueakServer.prototype.serveCache = function (req, res, wildPath) {
+        if (wildPath === void 0) { wildPath = undefined; }
+        var urlTar = (wildPath == undefined) ? req.parsed.pathname : wildPath;
         if (this.viewStore[urlTar] && this.viewStore[urlTar].onRequest)
             this.viewStore[urlTar].onRequest(req);
-        let cacheObj = this.squeakCache.get(urlTar);
+        var cacheObj = this.squeakCache.get(urlTar);
         this.sendData(req, res, cacheObj);
         if (this.viewStore[urlTar] && this.viewStore[urlTar].afterRequest)
             this.viewStore[urlTar].afterRequest(req);
         return;
-    }
-    sendData(req, res, dataObj) {
-        let acceptEncoding;
+    };
+    SqueakServer.prototype.sendData = function (req, res, dataObj) {
+        var acceptEncoding;
         if (req.headers['accept-encoding']) {
             acceptEncoding = req.headers['accept-encoding'];
         }
@@ -137,8 +140,9 @@ class SqueakServer {
         else {
             this.sendNormal(req, res, dataObj);
         }
-    }
-    sendZipped(req, res, dataObj) {
+    };
+    SqueakServer.prototype.sendZipped = function (req, res, dataObj) {
+        var _this = this;
         if (dataObj['zbuffer']) {
             if (this._debug) {
                 console.log('Using Cached Zip Buffer');
@@ -149,35 +153,33 @@ class SqueakServer {
                 res.end(dataObj['zbuffer']);
             }
             catch (e) {
-                this.handleStreamError(req, res);
                 if (this._debug)
-                    console.error(`Error: Unable to send response. ${e}`);
+                    console.error("Error: Unable to send response. " + e);
             }
         }
         else {
             if (this._debug)
                 console.log('Zipping Data');
-            zlib.gzip(dataObj.buffer, (err, zipped) => {
+            zlib.gzip(dataObj.buffer, function (err, zipped) {
                 if (err) {
-                    this.sendNormal(req, res, dataObj);
+                    _this.sendNormal(req, res, dataObj);
                 }
                 else {
                     try {
-                        if (this._debug)
+                        if (_this._debug)
                             console.log('Serving: gzip');
                         res.writeHead(200, { 'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip' });
                         res.end(zipped);
                     }
                     catch (e) {
-                        this.handleStreamError(req, res);
-                        if (this._debug)
-                            console.error(`Error: Unable to send response. ${e}`);
+                        if (_this._debug)
+                            console.error("Error: Unable to send response. " + e);
                     }
                 }
             });
         }
-    }
-    sendNormal(req, res, dataObj) {
+    };
+    SqueakServer.prototype.sendNormal = function (req, res, dataObj) {
         try {
             if (this._debug)
                 console.log('Serving:', dataObj.encoding);
@@ -185,33 +187,20 @@ class SqueakServer {
             res.end(dataObj.buffer, dataObj.encoding);
         }
         catch (e) {
-            this.handleStreamError(req, res);
             if (this._debug)
-                console.error(`Error: Unable to send response. ${e}`);
+                console.error("Error: Unable to send response. " + e);
         }
-    }
-    handleStreamError(req, res) {
-        //console.log(req);
-        //console.log(res);
-        if (req.stream && req.stream.session) {
-            req.stream.session.destroy();
-            console.log('destroying session');
-        }
-        /*
-        req.stream.session.close(()=>{
-            req.stream.session.destroy();
-        });
-        */
-    }
-    tryFile(req, res) {
-        let filePath = '' + req.parsed.pathname;
+    };
+    SqueakServer.prototype.tryFile = function (req, res) {
+        var _this = this;
+        var filePath = '' + req.parsed.pathname;
         filePath = this.publicPath + filePath;
-        const contentType = squeakutils_1.resolveContentType(filePath);
-        fs.readFile(filePath, (error, content) => {
+        var contentType = squeakutils_1.resolveContentType(filePath);
+        fs.readFile(filePath, function (error, content) {
             if (error) {
                 console.log(error.code);
                 if (error.code == 'ENOENT') {
-                    return this.serveNotFound(req, res);
+                    return _this.serveNotFound(req, res);
                 }
                 else {
                     try {
@@ -219,32 +208,32 @@ class SqueakServer {
                         res.end('Sorry, check with the site admin for error: ' + error.code + ' ..\n');
                     }
                     catch (e) {
-                        if (this._debug)
-                            console.error(`Error: Unable to send response. ${e}`);
+                        if (_this._debug)
+                            console.error("Error: Unable to send response. " + e);
                     }
                 }
             }
             else {
-                let dataObj = {
+                var dataObj = {
                     urlPath: req.parsed.pathname,
                     contentType: contentType,
                     buffer: content,
                     encoding: 'utf-8'
                 };
-                if (this.fileCache && this.fileCacheStrategy.cacheStrategy == 'CACHE_ON_FIRST_LOAD') {
-                    this.squeakCache.put(dataObj);
-                    this.setFileWatcher(req.parsed.pathname, filePath);
+                if (_this.fileCache && _this.fileCacheStrategy.cacheStrategy == 'CACHE_ON_FIRST_LOAD') {
+                    _this.squeakCache.put(dataObj);
+                    _this.setFileWatcher(req.parsed.pathname, filePath);
                 }
-                this.sendData(req, res, dataObj);
+                _this.sendData(req, res, dataObj);
             }
         });
-    }
-    checkWildcard(url) {
-        let wildcard = undefined;
-        let urlArray = url.split('/');
+    };
+    SqueakServer.prototype.checkWildcard = function (url) {
+        var wildcard = undefined;
+        var urlArray = url.split('/');
         if (this._debug)
             console.log('URL ARRAY: ', urlArray);
-        for (let i = 0, reqPath = '', len = urlArray.length; i < len; i++) {
+        for (var i = 0, reqPath = '', len = urlArray.length; i < len; i++) {
             if (urlArray[i] == '') {
                 reqPath += '/';
             }
@@ -259,24 +248,24 @@ class SqueakServer {
             }
         }
         return wildcard;
-    }
-    serveNotFound(req, res) {
-        let dataObj = {
+    };
+    SqueakServer.prototype.serveNotFound = function (req, res) {
+        var dataObj = {
             urlPath: req.parsed.pathname,
             contentType: 'text/html',
             buffer: this.notFound,
             encoding: 'utf-8'
         };
         this.sendData(req, res, dataObj);
-    }
+    };
     // INTERNAL METHODS
-    gatherDeclarations(bootstrap) {
-        for (let dec in bootstrap.declarations) {
+    SqueakServer.prototype.gatherDeclarations = function (bootstrap) {
+        for (var dec in bootstrap.declarations) {
             if (this.viewMap[bootstrap.declarations[dec]]) {
                 throw "NAME COLLISION IN VIEW MAP AT VIEWS";
             }
             else {
-                let newView = new bootstrap.declarations[dec]();
+                var newView = new bootstrap.declarations[dec]();
                 if (newView.onInit) {
                     newView.onInit();
                 }
@@ -288,9 +277,9 @@ class SqueakServer {
                     this.componentMap[newView.squeakName] = newView;
             }
         }
-    }
-    gatherRootViews(bootstrap) {
-        for (let root in bootstrap.roots) {
+    };
+    SqueakServer.prototype.gatherRootViews = function (bootstrap) {
+        for (var root in bootstrap.roots) {
             if (this.viewMap[bootstrap.roots[root].selector]) {
                 throw "NAME COLLISION IN VIEW MAP AT ROOTS";
             }
@@ -304,25 +293,25 @@ class SqueakServer {
                 };
             }
         }
-    }
-    applyInterfaces() {
-        for (let view in this.interfaceMap) {
+    };
+    SqueakServer.prototype.applyInterfaces = function () {
+        for (var view in this.interfaceMap) {
             this.interfaceStore[this.interfaceMap[view].urlPath] = this.interfaceMap[view];
             if (this.interfaceMap[view].consumeFrom)
                 this.consumeMap[this.interfaceMap[view].urlPath] = this.interfaceStore[this.interfaceMap[view].urlPath];
         }
-    }
-    readRootViews() {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.readRootViews = function () {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'root') {
                 this.viewMap[view].viewString = squeakcore_1.readRootView(this.viewMap[view], this.squeak.viewDir);
             }
         }
-    }
-    runViewBuilds() {
-        let globals = {};
-        let globalFound = false;
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.runViewBuilds = function () {
+        var globals = {};
+        var globalFound = false;
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view' && this.viewMap[view].squeakGlobal) {
                 this.viewMap[view].__build();
                 globals[view] = this.viewMap[view];
@@ -331,46 +320,46 @@ class SqueakServer {
         }
         if (!globalFound)
             globals = undefined;
-        for (let view in this.componentMap) {
+        for (var view in this.componentMap) {
             this.componentMap[view].__build(globals);
         }
-        for (let view in this.viewMap) {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view' && !this.viewMap[view].squeakGlobal) {
                 this.viewMap[view].__build(globals);
             }
         }
-    }
-    buildRoots() {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.buildRoots = function () {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'root') {
                 this.viewMap = squeakutils_1.viewMux(this.viewMap, view, this.viewMap[view], 'viewString', 'viewPreRender');
             }
         }
-    }
-    extractRoots() {
-        let roots = {};
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.extractRoots = function () {
+        var roots = {};
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'root')
                 roots[view] = this.viewMap[view];
         }
         return roots;
-    }
-    applyRoots(roots) {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.applyRoots = function (roots) {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view')
                 this.viewMap[view].__preRender(roots);
         }
-    }
-    lastPassRender() {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.lastPassRender = function () {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view')
                 this.viewMap[view].__lastPassRender(this.componentMap);
         }
-    }
-    setWatchers() {
-        let watchObjArr = [];
+    };
+    SqueakServer.prototype.setWatchers = function () {
+        var watchObjArr = [];
         if (this.squeak['squeakFile']) {
-            let watchObj = {
+            var watchObj = {
                 filePath: this.squeak.squeakFile,
                 watchContext: 'SQUEAK_MAIN',
                 watchStrategy: this.fileWatchStrategy.watchStrategy,
@@ -378,9 +367,9 @@ class SqueakServer {
             };
             watchObjArr.push(watchObj);
         }
-        for (let view in this.interfaceMap) {
+        for (var view in this.interfaceMap) {
             if (this.interfaceMap[view]['squeakFile']) {
-                let watchObj = {
+                var watchObj = {
                     filePath: this.interfaceMap[view].squeakFile,
                     watchContext: 'INTERFACE',
                     watchStrategy: this.fileWatchStrategy.watchStrategy,
@@ -391,9 +380,9 @@ class SqueakServer {
                 watchObjArr.push(watchObj);
             }
         }
-        for (let view in this.viewMap) {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'root') {
-                let watchObj = {
+                var watchObj = {
                     filePath: this.squeak.viewDir + '/' + this.viewMap[view].file,
                     watchContext: 'VIEW_ROOT',
                     watchStrategy: this.fileWatchStrategy.watchStrategy,
@@ -404,9 +393,9 @@ class SqueakServer {
                 watchObjArr.push(watchObj);
             }
         }
-        for (let view in this.viewMap) {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view') {
-                let watchObj = {
+                var watchObj = {
                     filePath: this.viewMap[view].squeakPath,
                     watchContext: 'VIEW',
                     watchStrategy: this.fileWatchStrategy.watchStrategy,
@@ -417,32 +406,33 @@ class SqueakServer {
                 watchObjArr.push(watchObj);
             }
         }
-        for (let i = 0, len = watchObjArr.length; i < len; i++) {
+        for (var i = 0, len = watchObjArr.length; i < len; i++) {
             this.squeakWatch.add(watchObjArr[i]);
         }
-    }
-    setFileWatcher(url, filePath) {
-        let watchObj = {
+    };
+    SqueakServer.prototype.setFileWatcher = function (url, filePath) {
+        var watchObj = {
             filePath: filePath,
             watchContext: 'FILE',
             watchStrategy: this.fileWatchStrategy.watchStrategy,
             trigger: url
         };
         this.squeakWatch.add(watchObj);
-    }
-    setEventListeners() {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.setEventListeners = function () {
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view') {
                 this.eventListeners[view] = this.viewMap[view].__emitter.on('viewEvt', this.viewEventHandler.bind(this));
             }
         }
-    }
-    viewEventHandler(evt) {
+    };
+    SqueakServer.prototype.viewEventHandler = function (evt) {
         if (evt.type == 'reRender')
             return this.reRenderView(evt.from);
-    }
-    pathMaker(overwrite = false) {
-        for (let view in this.viewMap) {
+    };
+    SqueakServer.prototype.pathMaker = function (overwrite) {
+        if (overwrite === void 0) { overwrite = false; }
+        for (var view in this.viewMap) {
             if (this.viewMap[view].type == 'view' && !this.viewMap[view].squeakGlobal && this.viewMap[view].urlPath) {
                 this.viewStore[this.viewMap[view].urlPath] = this.viewMap[view];
                 this.squeakCache.put({
@@ -453,15 +443,15 @@ class SqueakServer {
                 }, overwrite);
             }
         }
-    }
-    checkConsume(url) {
-        for (let view in this.consumeMap) {
+    };
+    SqueakServer.prototype.checkConsume = function (url) {
+        for (var view in this.consumeMap) {
             if (url.indexOf(view) == 0)
                 return view;
         }
         return undefined;
-    }
-    checkCacheStrategy() {
+    };
+    SqueakServer.prototype.checkCacheStrategy = function () {
         this.squeakCache = new squeakcache_1.SqueakCache(this._debug);
         if (this.fileCacheStrategy.cacheStrategy === 'NONE')
             return;
@@ -470,18 +460,19 @@ class SqueakServer {
             return this.squeakCache.putFiles(this.publicPath, this.fileCacheStrategy.cacheList);
         if (this.fileCacheStrategy.cacheStrategy === 'CACHE_CUSTOM_FUNCTION')
             return this.squeakCache.runCustomCache(this.fileCacheStrategy.cacheFunction);
-    }
-    checkWatchStrategy() {
+    };
+    SqueakServer.prototype.checkWatchStrategy = function () {
+        var _this = this;
         this.squeakWatch = new squeakwatch_1.SqueakWatch(this.publicPath, this.squeak.viewDir, this._debug);
-        this.squeakWatch.on('watchEvt', (alertPkg) => {
-            this.changeAlert(alertPkg);
+        this.squeakWatch.on('watchEvt', function (alertPkg) {
+            _this.changeAlert(alertPkg);
         });
         if (this.fileWatchStrategy.watchStrategy === 'NONE')
             return;
         // TODO: Add more
-    }
-    changeAlert(alertPkg) {
-        let manualDebug = false;
+    };
+    SqueakServer.prototype.changeAlert = function (alertPkg) {
+        var manualDebug = false;
         if (this._debug || manualDebug)
             console.log('CHANGE ALERT PACKAGE:', alertPkg);
         if (alertPkg.watchContext == 'VIEW_ROOT')
@@ -494,11 +485,11 @@ class SqueakServer {
             this.rebuildInterface(alertPkg.trigger);
         if (alertPkg.watchContext == 'SQUEAK_MAIN')
             this.rebuildFull();
-    }
-    rebuildRoot(view) {
+    };
+    SqueakServer.prototype.rebuildRoot = function (view) {
         console.log('Rebuilding Root');
         if (!this.viewMap[view] || !(this.viewMap[view].type == 'root')) {
-            console.error(`Error: ${view} not in ViewMap or is not a root view`);
+            console.error("Error: " + view + " not in ViewMap or is not a root view");
             return;
         }
         // Read Root Views
@@ -513,17 +504,17 @@ class SqueakServer {
         this.lastPassRender();
         // Make Paths
         this.pathMaker(true);
-    }
-    rebuildFull() {
+    };
+    SqueakServer.prototype.rebuildFull = function () {
         console.log('Full rebuild is currently disabled.');
-        let fullRebuild = false;
+        var fullRebuild = false;
         if (fullRebuild) {
             console.log('REBUILDING FULL');
-            let fileLocation = this.squeak.squeakFile;
-            let config = JSON.parse(this.squeak.__config);
+            var fileLocation = this.squeak.squeakFile;
+            var config = JSON.parse(this.squeak.__config);
             this.squeak = null;
             delete require.cache[fileLocation];
-            let reqBuild = require(fileLocation);
+            var reqBuild = require(fileLocation);
             /*
             console.log(reqBuild);
             let buildFn = reqBuild[Object.keys(reqBuild)[0]];
@@ -546,19 +537,19 @@ class SqueakServer {
             console.log('Reinitializing Squeak');
             this.setup();
         }
-    }
-    rebuildInterface(trigger) {
-        console.log(`Rebuilding ${trigger}`);
+    };
+    SqueakServer.prototype.rebuildInterface = function (trigger) {
+        console.log("Rebuilding " + trigger);
         // The following will destroy and reinstantiate the interface
         if (this.interfaceMap[trigger]['squeakFile']) {
             console.log('Destroying View Constructor');
-            let fileLocation = this.interfaceMap[trigger].squeakFile;
-            let config = JSON.parse(this.interfaceMap[trigger].__config);
+            var fileLocation = this.interfaceMap[trigger].squeakFile;
+            var config = JSON.parse(this.interfaceMap[trigger].__config);
             this.interfaceMap[trigger] = null;
             delete require.cache[fileLocation];
-            let reqBuild = require(fileLocation);
-            let buildFn = reqBuild[Object.keys(reqBuild)[0]];
-            let rebuild = squeakcore_1.SqueakInterface(config)(buildFn);
+            var reqBuild = require(fileLocation);
+            var buildFn = reqBuild[Object.keys(reqBuild)[0]];
+            var rebuild = squeakcore_1.SqueakInterface(config)(buildFn);
             this.interfaceMap[trigger] = new rebuild();
             if (this.interfaceMap[trigger]['onInit'])
                 this.interfaceMap[trigger].onInit();
@@ -566,14 +557,14 @@ class SqueakServer {
         // **********
         if (this.interfaceMap[trigger].consumeFrom)
             this.consumeMap[this.interfaceMap[trigger].urlPath] = this.interfaceStore[this.interfaceMap[trigger].urlPath];
-    }
-    rebuildView(view) {
-        console.log(`Rebuilding: ${view}`);
+    };
+    SqueakServer.prototype.rebuildView = function (view) {
+        console.log("Rebuilding: " + view);
         if (!this.viewMap[view]) {
-            console.error(`Error: Attempting to rebuild ${view} failed. Not present in View Map!`);
+            console.error("Error: Attempting to rebuild " + view + " failed. Not present in View Map!");
             return;
         }
-        let backupView = JSON.parse(JSON.stringify(this.viewMap[view]));
+        var backupView = JSON.parse(JSON.stringify(this.viewMap[view]));
         try {
             // Destroy and Reinstantiate
             if (this.viewMap[view]['squeakFile'])
@@ -584,14 +575,14 @@ class SqueakServer {
             console.error(e);
             this.viewMap[view] = backupView;
         }
-    }
-    reRenderView(view) {
-        let globals = {};
-        let globalFound = false;
-        for (let view in this.viewMap) {
-            if (this.viewMap[view].type == 'view' && this.viewMap[view].squeakGlobal) {
-                this.viewMap[view].__build();
-                globals[view] = this.viewMap[view];
+    };
+    SqueakServer.prototype.reRenderView = function (view) {
+        var globals = {};
+        var globalFound = false;
+        for (var view_1 in this.viewMap) {
+            if (this.viewMap[view_1].type == 'view' && this.viewMap[view_1].squeakGlobal) {
+                this.viewMap[view_1].__build();
+                globals[view_1] = this.viewMap[view_1];
                 globalFound = true;
             }
         }
@@ -610,34 +601,35 @@ class SqueakServer {
                 encoding: 'utf-8'
             }, true);
         }
-    }
-    reloadViewClass(view) {
+    };
+    SqueakServer.prototype.reloadViewClass = function (view) {
         console.log('Destroying View Constructor');
         if (this.eventListeners[view]) {
             this.eventListeners[view].removeListener('viewEvt', this.viewEventHandler.bind(this));
             delete this.eventListeners[view];
         }
-        let fileLocation = this.viewMap[view].squeakFile;
-        let config = JSON.parse(this.viewMap[view].__config);
+        var fileLocation = this.viewMap[view].squeakFile;
+        var config = JSON.parse(this.viewMap[view].__config);
         this.viewMap[view] = null;
         delete require.cache[fileLocation];
-        let reqBuild = require(fileLocation);
-        let buildFn = reqBuild[Object.keys(reqBuild)[0]];
-        let rebuild = squeakcore_1.SqueakView(config)(buildFn);
+        var reqBuild = require(fileLocation);
+        var buildFn = reqBuild[Object.keys(reqBuild)[0]];
+        var rebuild = squeakcore_1.SqueakView(config)(buildFn);
         this.viewMap[view] = new rebuild();
         this.eventListeners[view] = this.viewMap[view].__emitter.on('viewEvt', this.viewEventHandler.bind(this));
         if (this.viewMap[view]['onInit'])
             this.viewMap[view].onInit();
-    }
-    rebuildFile(fileTar) {
-        console.log(`Rebuilding file: ${fileTar}`);
-        let filePath = this.publicPath + fileTar;
+    };
+    SqueakServer.prototype.rebuildFile = function (fileTar) {
+        console.log("Rebuilding file: " + fileTar);
+        var filePath = this.publicPath + fileTar;
         this.squeakCache.putFile({
             urlPath: fileTar,
             contentType: squeakutils_1.resolveContentType(filePath),
             buffer: undefined,
             encoding: 'utf-8'
         }, filePath, true);
-    }
-}
+    };
+    return SqueakServer;
+}());
 exports.SqueakServer = SqueakServer;

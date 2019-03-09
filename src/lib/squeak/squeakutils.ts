@@ -81,6 +81,7 @@ export function parseBranch(node, pfn, doc){
                 let orig = node.textContent;
                 node.textContent = orig.replace('{{'+tagPkg[i].tVar+'}}', tagPkg[i].val);
             } else {
+                // Not currently used
                 let look = traverseTree(tagPkg[i].firstObj, node);
             }
         }
@@ -249,3 +250,45 @@ export function extractViewTemplate(){
 export function applyViewTemplate(){
 
 }
+
+export function extractBody(req){
+    return new Promise((resolve, reject)=>{
+        let body = '';
+        req.on('data', (data)=>{
+            body += data;
+        });
+        req.on('end', ()=>{
+            try {
+                console.log(body);
+                req['body'] = JSON.parse(body);
+                resolve(req);
+            } catch (e){
+                console.error(e);
+                resolve(undefined);
+            }
+        });
+    });
+}
+
+/*
+import * as formidable from '../formidable/index';
+
+export function receiveFile(req, uploadDir: string = '/tempUpload'){
+    let form = new formidable.IncomingForm();
+    form.encoding = 'utf-8';
+    let up = path.dirname(require.main.filename) + uploadDir;
+    console.log(up);
+    form.uploadDir = up;
+    return new Promise((resolve, reject)=>{
+        form.parse(req, (err, fields, files)=>{
+            if(err){
+                console.log(err);
+                reject(err);
+            }
+            req['files'] = files;
+            req['fields'] = fields;
+            resolve(req);
+        });
+    });
+}
+*/

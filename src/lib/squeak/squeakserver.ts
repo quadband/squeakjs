@@ -164,6 +164,7 @@ export class SqueakServer {
                 res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
                 res.end(dataObj['zbuffer']);
             }catch(e){
+                this.handleStreamError(req,res);
                 if(this._debug) console.error(`Error: Unable to send response. ${e}`);
             }
         } else {
@@ -177,6 +178,7 @@ export class SqueakServer {
                         res.writeHead(200, {'Content-Type': dataObj.contentType, 'Content-Encoding': 'gzip'});
                         res.end(zipped);
                     } catch(e){
+                        this.handleStreamError(req,res);
                         if(this._debug) console.error(`Error: Unable to send response. ${e}`);
                     }
                 }
@@ -190,8 +192,23 @@ export class SqueakServer {
             res.writeHead(200, {'Content-Type': dataObj.contentType});
             res.end(dataObj.buffer, dataObj.encoding);
         } catch (e){
+            this.handleStreamError(req,res);
             if(this._debug) console.error(`Error: Unable to send response. ${e}`);
         }
+    }
+
+    handleStreamError(req,res){
+        //console.log(req);
+        //console.log(res);
+        if(req.stream && req.stream.session){
+            req.stream.session.destroy();
+            console.log('destroying session');
+        }
+        /*
+        req.stream.session.close(()=>{
+            req.stream.session.destroy();
+        });
+        */
     }
 
     tryFile(req, res){

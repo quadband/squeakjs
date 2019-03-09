@@ -1,6 +1,6 @@
 {
   "name": "squeakjs",
-  "version": "1.0.20",
+  "version": "1.0.26",
   "description": "Squeak is a small and light weight caching webserver with powerful routing and view parsing magic.",
   "author": "David Schaefer",
   "license": "GPL-3.0",
